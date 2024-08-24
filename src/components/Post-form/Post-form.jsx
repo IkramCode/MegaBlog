@@ -1,29 +1,30 @@
 import React, { useCallback } from "react";
 import { useForm } from "react-hook-form";
-import { button, Input, Select, RTE } from "../index";
+import { Button, Input, RTE, Select } from "..";
 import appwriteService from "../../appwrite/config";
 import { useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 
 export default function PostForm({ post }) {
-  const navigate = useNavigate();
-  const userData = useSelector((state) => state.user.userData);
-
   const { register, handleSubmit, watch, setValue, control, getValues } =
     useForm({
       defaultValues: {
         title: post?.title || "",
-        slug: post?.slug || "",
+        slug: post?.$id || "",
         content: post?.content || "",
         status: post?.status || "active",
       },
     });
 
+  const navigate = useNavigate();
+  const userData = useSelector((state) => state.auth.userData);
+
   const submit = async (data) => {
     if (post) {
       const file = data.image[0]
-        ? appwriteService.uploadFile(data.image[0])
+        ? await appwriteService.uploadFile(data.image[0])
         : null;
+
       if (file) {
         appwriteService.deleteFile(post.featuredImage);
       }
@@ -46,7 +47,9 @@ export default function PostForm({ post }) {
           ...data,
           userId: userData.$id,
         });
-        if (dbPost) navigate(`/post/${dbPost.$id}`);
+        if (dbPost) {
+          navigate(`/post/${dbPost.$id}`);
+        }
       }
     }
   };
@@ -56,7 +59,7 @@ export default function PostForm({ post }) {
       return value
         .trim()
         .toLowerCase()
-        .replace(/^[a-zA-Z\d\s]+/g, "-")
+        .replace(/[^a-zA-Z\d\s]+/g, "-")
         .replace(/\s/g, "-");
     return "";
   }, []);
@@ -64,7 +67,7 @@ export default function PostForm({ post }) {
   React.useEffect(() => {
     const subscription = watch((value, { name }) => {
       if (name === "title") {
-        setValue("slug", slugTransform(value.title, { shouldValidate: true }));
+        setValue("slug", slugTransform(value.title), { shouldValidate: true });
       }
     });
 
